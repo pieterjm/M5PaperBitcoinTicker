@@ -7,7 +7,9 @@
 
 #define DISPLAY_PRICE 0
 #define DISPLAY_BLOCKHEIGHT 1
-#define DISPLAY_MAX 2
+#define DISPLAY_SATSUSD 2
+#define DISPLAY_MSCW 3
+#define DISPLAY_MAX 4
 
 #define TEXT_COLOR 15
 #define BG_COLOR 0
@@ -97,7 +99,7 @@ void bitcoin_blockheight()
       canvas.drawString(blockheight, 480, 270);
       canvas.setTextDatum(CC_DATUM);
       canvas.setTextSize(48);
-      canvas.drawString("Number of block in the blockchain",480,420);
+      canvas.drawString("Number of blocks in the blockchain",480,420);
 
       canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
     }
@@ -139,6 +141,74 @@ void bitcoin_price_usd()
 
 }
 
+void sats_per_usd()
+{
+  HTTPClient http;
+  http.begin("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",ca_coingecko); 
+  int httpCode = http.GET();
+  if(httpCode > 0) {
+    
+    // file found at server
+    if(httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();                
+      JSONVar myObject = JSON.parse(payload);
+      String sats = String(100000000 / (int) myObject["bitcoin"]["usd"]);
+     
+      canvas.fillCanvas(BG_COLOR);
+      canvas.setTextSize(240);
+      canvas.setTextColor(TEXT_COLOR);
+      canvas.setTextDatum(CL_DATUM);
+      canvas.drawString(sats, 270, 270);
+      canvas.setTextSize(64);
+      canvas.setTextDatum(CC_DATUM);
+      canvas.drawString("SATS", 150, 220);
+      canvas.drawLine(90,270,220,270,10,TEXT_COLOR);
+      canvas.drawString("1USD", 150, 320);
+      canvas.setTextDatum(CC_DATUM);
+      canvas.setTextSize(48);
+      canvas.drawString("Value of one US dollar in satoshis",480,420);
+
+      canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
+    }
+  } 
+  http.end();
+
+}
+
+void moscow_time()
+{
+  HTTPClient http;
+  http.begin("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",ca_coingecko); 
+  int httpCode = http.GET();
+  if(httpCode > 0) {
+    
+    // file found at server
+    if(httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();                
+      JSONVar myObject = JSON.parse(payload);
+      String sats = String(100000000 / ((int) myObject["bitcoin"]["usd"]));
+     
+      canvas.fillCanvas(BG_COLOR);
+      canvas.setTextSize(240);
+      canvas.setTextColor(TEXT_COLOR);
+      canvas.setTextDatum(CC_DATUM);
+      canvas.drawString(sats.substring(0,2), 400, 270);
+      canvas.drawString(":", 550, 250);
+      canvas.drawString(sats.substring(2), 700, 270);
+      canvas.setTextSize(64);
+      canvas.setTextDatum(CC_DATUM);
+      canvas.drawString("MSCW", 150, 220);
+      canvas.drawLine(80,270,230,270,10,TEXT_COLOR);
+      canvas.drawString("TIME", 150, 320);
+  
+      canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
+    }
+  } 
+  http.end();
+
+}
+
+
 bool update_display(void *)
 {
   switch ( display ) {
@@ -147,6 +217,12 @@ bool update_display(void *)
       break;
     case DISPLAY_BLOCKHEIGHT:
       bitcoin_blockheight();
+      break;
+    case DISPLAY_SATSUSD:
+      sats_per_usd();
+      break;
+    case DISPLAY_MSCW:
+      moscow_time();
       break;
     default:
       break;
@@ -193,6 +269,8 @@ void setup()
     }     
 
     // Update the display and start an update time to refresh each minute
+//    sats_per_usd();
+    moscow_time();
     timer.every(60000, update_display);
 }
 
