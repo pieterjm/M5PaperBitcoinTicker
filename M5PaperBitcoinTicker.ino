@@ -1,6 +1,6 @@
 #include "M5EPD.h"
 #include "binaryttf.h"
-#include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
+#include <WiFiManager.h> 
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
 #include <arduino-timer.h>
@@ -12,13 +12,34 @@
 #define DISPLAY_HASHRATE 4
 #define DISPLAY_MAX 5
 
+String legend[DISPLAY_MAX] = {
+  "Market price of bitcoin",
+  "Number of blocks in the blockchain",
+  "Value of one US dollar in satoshis",
+  "Moscow time",
+  "Current bitcoin mining hashrate (EH/s)"
+};
+
+
 #define TEXT_COLOR 0
 #define BG_COLOR 15
 
-M5EPD_Canvas canvas(&M5.EPD);
+#define SCREEN_WIDTH 960
+#define YPOS_LEGEND 400
+#define YPOS_TICKER 150
+#define XPOS_LEGEND 0
+#define XPOS_TICKER 0
+#define FONT_SIZE_LEGEND 48
+#define FONT_SIZE_TICKER 240
+
+int display = DISPLAY_PRICE;  // the ticker to display initially
+
+M5EPD_Canvas canvasLegend(&M5.EPD);
+M5EPD_Canvas canvasTicker(&M5.EPD);
+M5EPD_Canvas canvasFull(&M5.EPD);
+
 WiFiManager wm;
 auto timer = timer_create_default();
-int display = DISPLAY_PRICE;
 
 
 const char* ca_coingecko = "-----BEGIN CERTIFICATE-----\n" \
@@ -135,7 +156,6 @@ void update_hashrate()
   http.begin("https://mempool.space/api/v1/mining/hashrate/3d",ca_mempoolspace); 
   int httpCode = http.GET();
   if(httpCode > 0) {
-  
     // file found at server
     if(httpCode == HTTP_CODE_OK) {
       String payload = http.getString();                
@@ -170,120 +190,54 @@ void update_price()
   http.end();  
 }
 
-void bitcoin_hashrate(bool bUpdate)
+void display_ticker()
 {
-  if ( bUpdate ) {
-    update_hashrate();
-  }
-
-  canvas.fillCanvas(BG_COLOR);
-  canvas.setTextSize(240);
-  canvas.setTextColor(TEXT_COLOR);
-  canvas.setTextDatum(CC_DATUM);
-  canvas.drawString(hashrate, 480, 270);
-  canvas.setTextDatum(CC_DATUM);
-  canvas.setTextSize(48);
-  canvas.drawString("Current bitcoin mining hashrate (EH/s)",480,420);
-  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
-}
-
-void bitcoin_blockheight(bool bUpdate)
-{
-  if ( bUpdate ) {
-    update_blockheight();
-  }
-
-  canvas.fillCanvas(BG_COLOR);
-  canvas.setTextSize(240);
-  canvas.setTextColor(TEXT_COLOR);
-  canvas.setTextDatum(CC_DATUM);
-  canvas.drawString(blockheight, 480, 270);
-  canvas.setTextDatum(CC_DATUM);
-  canvas.setTextSize(48);
-  canvas.drawString("Number of blocks in the blockchain",480,420);
-  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
-}
-
-
-void bitcoin_price_usd(bool bUpdate)
-{
-  if ( bUpdate ) {
-    update_price();
-  }
-
-  canvas.fillCanvas(BG_COLOR);
-  canvas.setTextSize(240);
-  canvas.setTextColor(TEXT_COLOR);
-  canvas.setTextDatum(CC_DATUM);
-  canvas.drawString(price, 480, 270);
-  canvas.setTextDatum(CC_DATUM);
-  canvas.setTextSize(48);
-  canvas.drawString("Market price of bitcoin",480,420);
-  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
-
-}
-
-void sats_per_usd(bool bUpdate)
-{
-  if ( bUpdate ) {
-    update_price();
-  }
-
-  canvas.fillCanvas(BG_COLOR);
-  canvas.setTextSize(240);
-  canvas.setTextColor(TEXT_COLOR);
-  canvas.setTextDatum(CC_DATUM);
-  canvas.drawString(satsperusd, 480, 270);
-  canvas.setTextDatum(CC_DATUM);
-  canvas.setTextSize(48);
-  canvas.drawString("Value of one US dollar in satoshis",480,420);
-  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
-
-}
-
-void moscow_time(bool bUpdate)
-{
-  if ( bUpdate ) {
-    update_price();
-  }
-
-  canvas.fillCanvas(BG_COLOR);
-  canvas.setTextSize(240);
-  canvas.setTextColor(TEXT_COLOR);
-  canvas.setTextDatum(CC_DATUM);
-  canvas.drawString(satsperusd.substring(0,2), 310, 270);
-  canvas.drawString(":", 480, 250);
-  canvas.drawString(satsperusd.substring(2), 640, 270);
-  canvas.setTextDatum(CC_DATUM);
-  canvas.setTextSize(48);
-  canvas.drawString("Moscow time",480,420);
-  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace  
-}
-
-
-bool update_display(void *argument)
-{
-  bool bUpdate = (bool)argument;
-  
+  canvasTicker.createCanvas(960,FONT_SIZE_TICKER);
+  canvasTicker.fillCanvas(BG_COLOR);
+  canvasTicker.setTextSize(FONT_SIZE_TICKER);
+  canvasTicker.setTextColor(TEXT_COLOR);
+  canvasTicker.setTextDatum(TC_DATUM);
   switch ( display ) {
     case DISPLAY_PRICE:
-      bitcoin_price_usd(bUpdate);
+      canvasTicker.drawString(price, 480, 0);
       break;
-    case DISPLAY_BLOCKHEIGHT:
-      bitcoin_blockheight(bUpdate);
+     case DISPLAY_BLOCKHEIGHT:
+      canvasTicker.drawString(blockheight, 480, 0);
       break;
     case DISPLAY_SATSUSD:
-      sats_per_usd(bUpdate);
+      canvasTicker.drawString(satsperusd, 480, 0);
       break;
     case DISPLAY_MSCW:
-      moscow_time(bUpdate);
+      canvasTicker.drawString(satsperusd.substring(0,2), 310, 0);
+      canvasTicker.drawString(":", 480, -40);
+      canvasTicker.drawString(satsperusd.substring(2), 640, 0);
       break;
     case DISPLAY_HASHRATE:
-      bitcoin_hashrate(bUpdate);
-      break;
-    default:
+      canvasTicker.drawString(hashrate,480,0);
       break;
   }
+  canvasTicker.pushCanvas(XPOS_TICKER, YPOS_TICKER, UPDATE_MODE_DU);  
+}
+
+void display_legend(String l) 
+{
+  canvasLegend.createCanvas(960,FONT_SIZE_LEGEND);
+  canvasLegend.fillCanvas(BG_COLOR);
+  canvasLegend.setTextColor(TEXT_COLOR);
+  canvasLegend.setTextDatum(TC_DATUM);
+  canvasLegend.setTextSize(FONT_SIZE_LEGEND);
+  canvasLegend.drawString(l,480,0);
+  canvasLegend.pushCanvas(XPOS_LEGEND, YPOS_LEGEND, UPDATE_MODE_DU);
+}
+
+
+bool update_display(void *)
+{
+  update_hashrate();
+  update_price();
+  update_blockheight();
+
+  display_ticker();
   
   return true;
 }
@@ -296,42 +250,41 @@ bool check_buttons(void *)
     if (display < 0) {
       display = DISPLAY_MAX - 1;
     }
-    update_display((void *)false);    
+    display_legend(legend[display]);
+    display_ticker();
   }
   if( M5.BtnR.wasPressed()) {
     display++;
     if (display >= DISPLAY_MAX ) {
       display = 0;
     }
-    update_display((void *)false);
+    display_legend(legend[display]);
+    display_ticker();
   }
   return true;
 }
 
+
 void setup()
 {
-  // disable WifiManager debugging
   wm.setDebugOutput(false);
+  Serial.setDebugOutput(false);  
   
   M5.begin();
   M5.EPD.Clear(true);
 
-  Serial.setDebugOutput(false);  
 
-  // initialize canvas
-  canvas.loadFont(binaryttf, sizeof(binaryttf)); // Load font files from binary data
-  canvas.createCanvas(960,540);
-  canvas.createRender(240);
-  canvas.createRender(64);
-  canvas.createRender(48);
-  canvas.fillCanvas(BG_COLOR);
-  canvas.setTextColor(TEXT_COLOR);
+  canvasFull.createCanvas(960,540);
+  canvasFull.fillCanvas(BG_COLOR);
+  canvasFull.pushCanvas(0, 0, UPDATE_MODE_DU);  
 
-  canvas.setTextDatum(CC_DATUM);
-  canvas.setTextSize(48);
-  canvas.drawString("Bitcoin Ticker",480,420);
-  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);
+  // initialize canvas of legend
+  canvasLegend.loadFont(binaryttf, sizeof(binaryttf)); // Load font files from binary data
+  canvasLegend.createRender(FONT_SIZE_TICKER);
+  canvasLegend.createRender(FONT_SIZE_LEGEND);
 
+  display_legend("Bitcoin Ticker");
+  
 
   WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
   bool res;
@@ -342,12 +295,16 @@ void setup()
   }     
 
   // Update the display and start an update time to refresh each minute
-  display = 0;
   update_hashrate();
   update_price();
   update_blockheight();
-  update_display((void *)false);
-  timer.every(60000, update_display, (void *)true);    
+
+  display = 0;
+  display_legend(legend[display]);
+  display_ticker();
+  
+  //update_display((void *)false);
+  timer.every(60000, update_display);    
   timer.every(100, check_buttons);
 }
 
