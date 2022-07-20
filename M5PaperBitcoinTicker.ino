@@ -11,8 +11,8 @@
 #define DISPLAY_MSCW 3
 #define DISPLAY_MAX 4
 
-#define TEXT_COLOR 15
-#define BG_COLOR 0
+#define TEXT_COLOR 0
+#define BG_COLOR 15
 
 M5EPD_Canvas canvas(&M5.EPD);
 WiFiManager wm;
