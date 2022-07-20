@@ -9,7 +9,8 @@
 #define DISPLAY_BLOCKHEIGHT 1
 #define DISPLAY_SATSUSD 2
 #define DISPLAY_MSCW 3
-#define DISPLAY_MAX 4
+#define DISPLAY_HASHRATE 4
+#define DISPLAY_MAX 5
 
 #define TEXT_COLOR 0
 #define BG_COLOR 15
@@ -84,6 +85,7 @@ const char* ca_mempoolspace = "-----BEGIN CERTIFICATE-----\n" \
 String blockheight = "";
 String price = "";
 String satsperusd = "";
+String hashrate = "";
 
 void update_blockheight()
 {
@@ -95,6 +97,56 @@ void update_blockheight()
     // file found at server
     if(httpCode == HTTP_CODE_OK) {
       blockheight = http.getString();                
+    }
+  } 
+  http.end();
+}
+
+int find_in_string(String str,String pat)
+{
+    int found = 0;
+    int index = 0;
+    int len;
+
+    len = str.length();
+    
+    if (pat.length() > len) {
+        return 0;
+    }
+    while (index < len) {
+        if (str.charAt(index) == pat.charAt(found)) {          
+            found++;
+            if (pat.length() == found) {
+                return (index - found);
+            }
+        }
+        else {
+            found = 0;
+        }
+        index++;
+    }
+
+    return 0;
+}
+
+void update_hashrate()
+{
+  HTTPClient http;
+  http.begin("https://mempool.space/api/v1/mining/hashrate/3d",ca_mempoolspace); 
+  int httpCode = http.GET();
+  if(httpCode > 0) {
+  
+    // file found at server
+    if(httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();                
+      int start = find_in_string(payload,"currentHashrate");
+      int stop = find_in_string(payload,"currentDifficulty");
+      if ( start > 0 && stop > 0 ) {
+        start += strlen("currentHashrate") + 3;
+        stop -= 1;
+        hashrate = payload.substring(start, stop);
+        hashrate = hashrate.substring(0,hashrate.length() - 18);
+      }
     }
   } 
   http.end();
@@ -118,6 +170,22 @@ void update_price()
   http.end();  
 }
 
+void bitcoin_hashrate(bool bUpdate)
+{
+  if ( bUpdate ) {
+    update_hashrate();
+  }
+
+  canvas.fillCanvas(BG_COLOR);
+  canvas.setTextSize(240);
+  canvas.setTextColor(TEXT_COLOR);
+  canvas.setTextDatum(CC_DATUM);
+  canvas.drawString(hashrate, 480, 270);
+  canvas.setTextDatum(CC_DATUM);
+  canvas.setTextSize(48);
+  canvas.drawString("Current bitcoin mining hashrate (EH/s)",480,420);
+  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
+}
 
 void bitcoin_blockheight(bool bUpdate)
 {
@@ -210,6 +278,9 @@ bool update_display(void *argument)
     case DISPLAY_MSCW:
       moscow_time(bUpdate);
       break;
+    case DISPLAY_HASHRATE:
+      bitcoin_hashrate(bUpdate);
+      break;
     default:
       break;
   }
@@ -272,6 +343,7 @@ void setup()
 
   // Update the display and start an update time to refresh each minute
   display = 0;
+  update_hashrate();
   update_price();
   update_blockheight();
   update_display((void *)false);
