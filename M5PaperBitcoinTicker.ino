@@ -81,200 +81,203 @@ const char* ca_mempoolspace = "-----BEGIN CERTIFICATE-----\n" \
 "MntHWpdLgtJmwsQt6j8k9Kf5qLnjatkYYaA7jBU=\n" \
 "-----END CERTIFICATE-----\n";
 
-void bitcoin_blockheight()
+String blockheight = "";
+String price = "";
+String satsperusd = "";
+
+void update_blockheight()
 {
   HTTPClient http;
   http.begin("https://mempool.space/api/blocks/tip/height",ca_mempoolspace); 
   int httpCode = http.GET();
   if(httpCode > 0) {
-    
-    // file found at server
-    if(httpCode == HTTP_CODE_OK) {
-      String blockheight = http.getString();                
-     
-      canvas.fillCanvas(BG_COLOR);
-      canvas.setTextSize(240);
-      canvas.setTextColor(TEXT_COLOR);
-      canvas.setTextDatum(CC_DATUM);
-      canvas.drawString(blockheight, 480, 270);
-      canvas.setTextDatum(CC_DATUM);
-      canvas.setTextSize(48);
-      canvas.drawString("Number of blocks in the blockchain",480,420);
-
-      canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
-    }
-  } 
-  http.end();
-}
-
-void bitcoin_price_usd()
-{
-  HTTPClient http;
-  http.begin("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",ca_coingecko); 
-  int httpCode = http.GET();
-  if(httpCode > 0) {
-    
-    // file found at server
-    if(httpCode == HTTP_CODE_OK) {
-      String payload = http.getString();                
-      JSONVar myObject = JSON.parse(payload);
-      String price = String((int) myObject["bitcoin"]["usd"]);
-     
-      canvas.fillCanvas(BG_COLOR);
-      canvas.setTextSize(240);
-      canvas.setTextColor(TEXT_COLOR);
-      canvas.setTextDatum(CL_DATUM);
-      canvas.drawString("$", 150, 270);
-      canvas.drawString(price, 270, 270);
-      canvas.setTextSize(64);
-      canvas.drawString("BTC", 20, 220);
-      canvas.drawLine(30,270,130,270,10,TEXT_COLOR);
-      canvas.drawString("USD", 20, 320);
-      canvas.setTextDatum(CC_DATUM);
-      canvas.setTextSize(48);
-      canvas.drawString("Market price of bitcoin",480,420);
-
-      canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
-    }
-  } 
-  http.end();
-
-}
-
-void sats_per_usd()
-{
-  HTTPClient http;
-  http.begin("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",ca_coingecko); 
-  int httpCode = http.GET();
-  if(httpCode > 0) {
-    
-    // file found at server
-    if(httpCode == HTTP_CODE_OK) {
-      String payload = http.getString();                
-      JSONVar myObject = JSON.parse(payload);
-      String sats = String(100000000 / (int) myObject["bitcoin"]["usd"]);
-     
-      canvas.fillCanvas(BG_COLOR);
-      canvas.setTextSize(240);
-      canvas.setTextColor(TEXT_COLOR);
-      canvas.setTextDatum(CL_DATUM);
-      canvas.drawString(sats, 270, 270);
-      canvas.setTextSize(64);
-      canvas.setTextDatum(CC_DATUM);
-      canvas.drawString("SATS", 150, 220);
-      canvas.drawLine(90,270,220,270,10,TEXT_COLOR);
-      canvas.drawString("1USD", 150, 320);
-      canvas.setTextDatum(CC_DATUM);
-      canvas.setTextSize(48);
-      canvas.drawString("Value of one US dollar in satoshis",480,420);
-
-      canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
-    }
-  } 
-  http.end();
-
-}
-
-void moscow_time()
-{
-  HTTPClient http;
-  http.begin("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",ca_coingecko); 
-  int httpCode = http.GET();
-  if(httpCode > 0) {
-    
-    // file found at server
-    if(httpCode == HTTP_CODE_OK) {
-      String payload = http.getString();                
-      JSONVar myObject = JSON.parse(payload);
-      String sats = String(100000000 / ((int) myObject["bitcoin"]["usd"]));
-     
-      canvas.fillCanvas(BG_COLOR);
-      canvas.setTextSize(240);
-      canvas.setTextColor(TEXT_COLOR);
-      canvas.setTextDatum(CC_DATUM);
-      canvas.drawString(sats.substring(0,2), 400, 270);
-      canvas.drawString(":", 550, 250);
-      canvas.drawString(sats.substring(2), 700, 270);
-      canvas.setTextSize(64);
-      canvas.setTextDatum(CC_DATUM);
-      canvas.drawString("MSCW", 150, 220);
-      canvas.drawLine(80,270,230,270,10,TEXT_COLOR);
-      canvas.drawString("TIME", 150, 320);
   
-      canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
+    // file found at server
+    if(httpCode == HTTP_CODE_OK) {
+      blockheight = http.getString();                
     }
   } 
   http.end();
+}
 
+void update_price()
+{
+  HTTPClient http;
+  http.begin("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",ca_coingecko); 
+  int httpCode = http.GET();
+  if(httpCode > 0) {
+    
+    // file found at server
+    if(httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();                
+      JSONVar myObject = JSON.parse(payload);
+      price = String("$") + String((int) myObject["bitcoin"]["usd"]);
+      satsperusd = String(100000000 / (int) myObject["bitcoin"]["usd"]);
+    }
+  } 
+  http.end();  
 }
 
 
-bool update_display(void *)
+void bitcoin_blockheight(bool bUpdate)
 {
+  if ( bUpdate ) {
+    update_blockheight();
+  }
+
+  canvas.fillCanvas(BG_COLOR);
+  canvas.setTextSize(240);
+  canvas.setTextColor(TEXT_COLOR);
+  canvas.setTextDatum(CC_DATUM);
+  canvas.drawString(blockheight, 480, 270);
+  canvas.setTextDatum(CC_DATUM);
+  canvas.setTextSize(48);
+  canvas.drawString("Number of blocks in the blockchain",480,420);
+  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
+}
+
+
+void bitcoin_price_usd(bool bUpdate)
+{
+  if ( bUpdate ) {
+    update_price();
+  }
+
+  canvas.fillCanvas(BG_COLOR);
+  canvas.setTextSize(240);
+  canvas.setTextColor(TEXT_COLOR);
+  canvas.setTextDatum(CC_DATUM);
+  canvas.drawString(price, 480, 270);
+  canvas.setTextDatum(CC_DATUM);
+  canvas.setTextSize(48);
+  canvas.drawString("Market price of bitcoin",480,420);
+  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
+
+}
+
+void sats_per_usd(bool bUpdate)
+{
+  if ( bUpdate ) {
+    update_price();
+  }
+
+  canvas.fillCanvas(BG_COLOR);
+  canvas.setTextSize(240);
+  canvas.setTextColor(TEXT_COLOR);
+  canvas.setTextDatum(CC_DATUM);
+  canvas.drawString(satsperusd, 480, 270);
+  canvas.setTextDatum(CC_DATUM);
+  canvas.setTextSize(48);
+  canvas.drawString("Value of one US dollar in satoshis",480,420);
+  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace
+
+}
+
+void moscow_time(bool bUpdate)
+{
+  if ( bUpdate ) {
+    update_price();
+  }
+
+  canvas.fillCanvas(BG_COLOR);
+  canvas.setTextSize(240);
+  canvas.setTextColor(TEXT_COLOR);
+  canvas.setTextDatum(CC_DATUM);
+  canvas.drawString(satsperusd.substring(0,2), 310, 270);
+  canvas.drawString(":", 480, 250);
+  canvas.drawString(satsperusd.substring(2), 640, 270);
+  canvas.setTextDatum(CC_DATUM);
+  canvas.setTextSize(48);
+  canvas.drawString("Moscow time",480,420);
+  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);   // does not blink, but has trace  
+}
+
+
+bool update_display(void *argument)
+{
+  bool bUpdate = (bool)argument;
+  
   switch ( display ) {
     case DISPLAY_PRICE:
-      bitcoin_price_usd();
+      bitcoin_price_usd(bUpdate);
       break;
     case DISPLAY_BLOCKHEIGHT:
-      bitcoin_blockheight();
+      bitcoin_blockheight(bUpdate);
       break;
     case DISPLAY_SATSUSD:
-      sats_per_usd();
+      sats_per_usd(bUpdate);
       break;
     case DISPLAY_MSCW:
-      moscow_time();
+      moscow_time(bUpdate);
       break;
     default:
       break;
   }
-  display = display + 1;
-  if ( display >= DISPLAY_MAX ) {
-    display = 0;
+  
+  return true;
+}
+
+bool check_buttons(void *) 
+{
+  M5.update();  
+  if( M5.BtnL.wasPressed()) { 
+    display--;
+    if (display < 0) {
+      display = DISPLAY_MAX - 1;
+    }
+    update_display((void *)false);    
+  }
+  if( M5.BtnR.wasPressed()) {
+    display++;
+    if (display >= DISPLAY_MAX ) {
+      display = 0;
+    }
+    update_display((void *)false);
   }
   return true;
 }
 
-   
 void setup()
 {
   // disable WifiManager debugging
   wm.setDebugOutput(false);
   
-    M5.begin();
-    M5.EPD.Clear(true);
+  M5.begin();
+  M5.EPD.Clear(true);
 
-    Serial.setDebugOutput(false);  
+  Serial.setDebugOutput(false);  
 
-    // initialize canvas
-    canvas.loadFont(binaryttf, sizeof(binaryttf)); // Load font files from binary data
-    canvas.createCanvas(960,540);
-    canvas.createRender(240);
-    canvas.createRender(64);
-    canvas.createRender(48);
-    canvas.fillCanvas(BG_COLOR);
-    canvas.setTextColor(TEXT_COLOR);
+  // initialize canvas
+  canvas.loadFont(binaryttf, sizeof(binaryttf)); // Load font files from binary data
+  canvas.createCanvas(960,540);
+  canvas.createRender(240);
+  canvas.createRender(64);
+  canvas.createRender(48);
+  canvas.fillCanvas(BG_COLOR);
+  canvas.setTextColor(TEXT_COLOR);
 
-    canvas.setTextDatum(CC_DATUM);
-    canvas.setTextSize(48);
-    canvas.drawString("Bitcoin Ticker",480,420);
-    canvas.pushCanvas(0, 0, UPDATE_MODE_DU);
+  canvas.setTextDatum(CC_DATUM);
+  canvas.setTextSize(48);
+  canvas.drawString("Bitcoin Ticker",480,420);
+  canvas.pushCanvas(0, 0, UPDATE_MODE_DU);
 
 
-    WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
-    bool res;
+  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
+  bool res;
 
-    res = wm.autoConnect("BitcoinTicker"); // anonymous ap         
-    if(!res) {
-        ESP.restart();
-    }     
+  res = wm.autoConnect("BitcoinTicker"); // anonymous ap         
+  if(!res) {
+      ESP.restart();
+  }     
 
-    // Update the display and start an update time to refresh each minute
-//    sats_per_usd();
-    moscow_time();
-    timer.every(60000, update_display);
+  // Update the display and start an update time to refresh each minute
+  display = 0;
+  update_price();
+  update_blockheight();
+  update_display((void *)false);
+  timer.every(60000, update_display, (void *)true);    
+  timer.every(100, check_buttons);
 }
-
-
 
 void loop()
 { 

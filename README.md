@@ -1,5 +1,5 @@
 # M5PaperBitcoinTicker
-A bitcoin price ticker for the M5Stack M5Paper epaper device. Periodically retrieves the bitcoin price from the Coingecko API and displays that on the display. The device displays metriucs such as the bitcoin price, current blockheight, sats per dollar and Moscow time.
+A bitcoin price ticker for the M5Stack M5Paper epaper device. Periodically retrieves the bitcoin price from the Coingecko API and displays that on the display. The device displays metrics such as the bitcoin price, current blockheight, sats per dollar and Moscow time. The metric to be displayed can be selected with the scroll wheel on the side of the device.
 
 # Installation
 
