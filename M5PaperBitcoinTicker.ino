@@ -354,7 +354,6 @@ bool bUpdate = false;
 
 bool update_progress(void *)
 {
-   Serial.println("Update progress");
    otastatus = HttpsOTA.status();
    switch (otastatus ) {
     case HTTPS_OTA_SUCCESS: 
