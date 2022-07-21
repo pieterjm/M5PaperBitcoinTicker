@@ -14,6 +14,8 @@
 #define DISPLAY_MEMPOOL 5
 #define DISPLAY_MAX 6
 
+#define BITCOINTICKER_VERSION "0.1"
+
 String legend[DISPLAY_MAX] = {
   "Market price of bitcoin",
   "Number of blocks in the blockchain",
@@ -350,21 +352,17 @@ void HttpEvent(HttpEvent_t *event)
 }
 
 
-bool bUpdate = false;
-
 bool update_progress(void *)
 {
    otastatus = HttpsOTA.status();
    switch (otastatus ) {
     case HTTPS_OTA_SUCCESS: 
         Serial.println("Firmware written successfully.");
-        timer.cancel();        
-        if ( bUpdate ) {
-            ESP.restart();
-        }
+        ESP.restart();
         break;
     case HTTPS_OTA_FAIL: 
         Serial.println("Firmware Upgrade Fail");
+        ESP.restart();
         break;
     case HTTPS_OTA_UPDATING:
         Serial.println("Update in progress");
@@ -380,10 +378,31 @@ bool update_progress(void *)
 
 void update_firmware()
 {
-    bUpdate = false;
+  bool bUpdate = false;
+  
+  HTTPClient http;
+  http.begin("https://github.com/pieterjm/M5PaperBitcoinTicker/raw/main/firmware/bitcointicker-version.txt",ca_github); 
+  int httpCode = http.GET();
+  if(httpCode > 0) {  
+    // file found at server
+    if(httpCode == HTTP_CODE_OK) {
+      if ( http.getString().equals(BITCOINTICKER_VERSION) ) {
+          Serial.println("Version is the same");
+      } else {
+        Serial.println("Version is not the same, update required");
+        bUpdate = true;
+      }      
+    }
+  } 
+  http.end();
+
+  if ( bUpdate ) {
     Serial.println("update_firmware start");
 
-    HttpsOTA.onHttpEvent(HttpEvent);
+    // compare current with remote version
+    
+
+    //HttpsOTA.onHttpEvent(HttpEvent);
     Serial.println("Starting OTA");
     //HttpsOTA.begin("https://github.com/pieterjm/M5PaperBitcoinTicker/raw/main/firmware/bitcointicker-latest.bin",,ca_github);
     HttpsOTA.begin("https://raw.githubusercontent.com/pieterjm/M5PaperBitcoinTicker/main/firmware/bitcointicker-latest.bin",ca_github);
@@ -391,6 +410,8 @@ void update_firmware()
     Serial.println("Please Wait it takes some time ...");
 
     timer.every(1000, update_progress);
+
+  }
 }
 
 
@@ -426,18 +447,18 @@ void setup()
   update_firmware();
 
   // Update the display and start an update time to refresh each minute
-  //update_hashrate();
-  //update_price();
-  //update_blockheight();
-  //update_mempool_stats();
+  update_hashrate();
+  update_price();
+  update_blockheight();
+  update_mempool_stats();
   
   display = DISPLAY_MSCW;
   display_legend(legend[display]);
   display_ticker();
   
   //update_display((void *)false);
-  //timer.every(60000, update_display);    
-  //timer.every(100, check_buttons);
+  timer.every(60000, update_display);    
+  timer.every(100, check_buttons);
 }
 
 void loop()
