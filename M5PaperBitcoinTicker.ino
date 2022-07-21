@@ -4,7 +4,7 @@
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
 #include <arduino-timer.h>
-#include <HTTPUpdate.h>
+#include "HttpsOTAUpdate.h"
 
 #define DISPLAY_PRICE 0
 #define DISPLAY_BLOCKHEIGHT 1
@@ -44,6 +44,8 @@ M5EPD_Canvas canvasFull(&M5.EPD);
 WiFiManager wm;
 auto timer = timer_create_default();
 
+
+static HttpsOTAStatus_t otastatus;
 
 const char* ca_coingecko = "-----BEGIN CERTIFICATE-----\n" \
 "MIIDzTCCArWgAwIBAgIQCjeHZF5ftIwiTv0b7RQMPDANBgkqhkiG9w0BAQsFADBa\n" \
@@ -141,6 +143,7 @@ String price = "";
 String satsperusd = "";
 String hashrate = "";
 String mempool = "";
+
 
 
 
@@ -321,62 +324,42 @@ bool check_buttons(void *)
   return true;
 }
 
-
-void update_progress(int cur, int total) {
-  Serial.printf("CALLBACK:  HTTP update process at %d of %d bytes...\n", cur, total);
-}
-
-void update_error(int err) {
-  Serial.printf("CALLBACK:  HTTP update fatal error code %d\n", err);
-}
-
-void update_started() {
-  Serial.println("CALLBACK:  HTTP update process started");
-}
-
-void update_finished() {
-  Serial.println("CALLBACK:  HTTP update process finished");
+void HttpEvent(HttpEvent_t *event)
+{
+    switch(event->event_id) {
+        case HTTP_EVENT_ERROR:
+            Serial.println("Http Event Error");
+            break;
+        case HTTP_EVENT_ON_CONNECTED:
+            Serial.println("Http Event On Connected");
+            break;
+        case HTTP_EVENT_HEADER_SENT:
+            Serial.println("Http Event Header Sent");
+            break;
+        case HTTP_EVENT_ON_HEADER:
+            Serial.printf("Http Event On Header, key=%s, value=%s\n", event->header_key, event->header_value);
+            break;
+        case HTTP_EVENT_ON_DATA:
+            break;
+        case HTTP_EVENT_ON_FINISH:
+            Serial.println("Http Event On Finish");
+            break;
+        case HTTP_EVENT_DISCONNECTED:
+            Serial.println("Http Event Disconnected");
+            break;
+    }
 }
    
 void update_firmware()
 {
-    Serial.println("update_firmware start");
-    WiFiClientSecure client;
-    client.setCACert(ca_github);
-
-
-
-    // Reading data over SSL may be slow, use an adequate timeout
-    client.setTimeout(12000 / 1000); // timeout argument is defined in seconds for setTimeout
-
-
-    //'httpUpdate.onStart(update_started);
-    //httpUpdate.onEnd(update_finished);
-    httpUpdate.onProgress(update_progress);
-    httpUpdate.onError(update_error);
-    httpUpdate.onStart(update_started);
-    httpUpdate.onEnd(update_finished);
-    t_httpUpdate_return ret = httpUpdate.update(client, "https://raw.githubusercontent.com/pieterjm/M5PaperBitcoinTicker/main/firmware/bitcointicker-latest.bin");
   
-   switch (ret) {
-      case HTTP_UPDATE_FAILED:
-        Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-        break;
+    Serial.println("update_firmware start");
 
-      case HTTP_UPDATE_NO_UPDATES:
-        Serial.println("HTTP_UPDATE_NO_UPDATES");
-        break;
+    HttpsOTA.onHttpEvent(HttpEvent);
+    Serial.println("Starting OTA");
+    HttpsOTA.begin("https://raw.githubusercontent.com/pieterjm/M5PaperBitcoinTicker/main/firmware/bitcointicker-latest.bin",ca_github);
 
-      case HTTP_UPDATE_OK:
-        Serial.println("HTTP_UPDATE_OK");
-        break;
-      default:
-        Serial.println("Some other error");
-        Serial.println(ret);
-        break;
-    }
-    Serial.println("update_firmware finished");
-
+    Serial.println("Please Wait it takes some time ...");
 }
 
 void setup()
@@ -411,21 +394,29 @@ void setup()
   update_firmware();
 
   // Update the display and start an update time to refresh each minute
-  update_hashrate();
-  update_price();
-  update_blockheight();
-  update_mempool_stats();
+  //update_hashrate();
+  //update_price();
+  //update_blockheight();
+  //update_mempool_stats();
   
   display = DISPLAY_MSCW;
   display_legend(legend[display]);
   display_ticker();
   
   //update_display((void *)false);
-  timer.every(60000, update_display);    
-  timer.every(100, check_buttons);
+  //timer.every(60000, update_display);    
+  //timer.every(100, check_buttons);
 }
 
 void loop()
 { 
-  timer.tick(); 
+    otastatus = HttpsOTA.status();
+    if(otastatus == HTTPS_OTA_SUCCESS) { 
+        Serial.println("Firmware written successfully. To reboot device, call API ESP.restart() or PUSH restart button on device");
+    } else if(otastatus == HTTPS_OTA_FAIL) { 
+        Serial.println("Firmware Upgrade Fail");
+    }
+    delay(1000);
+  
+  //timer.tick(); 
 }
