@@ -14,7 +14,7 @@
 #define DISPLAY_MEMPOOL 5
 #define DISPLAY_MAX 6
 
-#define BITCOINTICKER_VERSION "0.2"
+#define BITCOINTICKER_VERSION "0.3"
 
 String legend[DISPLAY_MAX] = {
   "Market price of bitcoin",
@@ -26,8 +26,8 @@ String legend[DISPLAY_MAX] = {
 };
 
 
-#define TEXT_COLOR 0
-#define BG_COLOR 15
+#define TEXT_COLOR 15
+#define BG_COLOR 0
 
 #define SCREEN_WIDTH 960
 #define YPOS_LEGEND 400
@@ -387,11 +387,7 @@ bool update_firmware(void *)
     if(httpCode == HTTP_CODE_OK) {
       JSONVar myObject = JSON.parse(http.getString());
       String version = String((const char *)myObject["version"]);
-      Serial.println("Remote version: '" + version + "'  '" + BITCOINTICKER_VERSION + "'");
-      if ( version.equals(BITCOINTICKER_VERSION) ) {
-          Serial.println("Version is the same");
-      } else {
-        Serial.println("Version is not the same, update required");
+      if ( !version.equals(BITCOINTICKER_VERSION) ) {
         bUpdate = true;
       }      
     }
@@ -399,7 +395,7 @@ bool update_firmware(void *)
   http.end();
 
   if ( bUpdate ) {
-    Serial.println("update_firmware start");
+    display_legend("Updating firmware. This may take a while.");
     HttpsOTA.onHttpEvent(HttpEvent);
     HttpsOTA.begin("https://raw.githubusercontent.com/pieterjm/M5PaperBitcoinTicker/main/firmware/bitcointicker-latest.bin",ca_github);
     timer.cancel();
@@ -452,7 +448,7 @@ void setup()
   display_ticker();
   
   //update_display((void *)false);
-  timer.every(300000, update_firmware);  
+  timer.every(3600000, update_firmware);  
   timer.every(60000, update_display);    
   timer.every(100, check_buttons);
 }
