@@ -322,14 +322,31 @@ bool check_buttons(void *)
 }
 
 
+void update_progress(int cur, int total) {
+  Serial.printf("CALLBACK:  HTTP update process at %d of %d bytes...\n", cur, total);
+}
+
+void update_error(int err) {
+  Serial.printf("CALLBACK:  HTTP update fatal error code %d\n", err);
+}
+
+
 void update_firmware()
 {
+    Serial.println("update_firmware start");
     WiFiClientSecure client;
     client.setCACert(ca_github);
+
+
 
     // Reading data over SSL may be slow, use an adequate timeout
     client.setTimeout(12000 / 1000); // timeout argument is defined in seconds for setTimeout
 
+
+    //'httpUpdate.onStart(update_started);
+    //httpUpdate.onEnd(update_finished);
+    httpUpdate.onProgress(update_progress);
+    httpUpdate.onError(update_error);
     t_httpUpdate_return ret = httpUpdate.update(client, "https://raw.githubusercontent.com/pieterjm/M5PaperBitcoinTicker/main/firmware/bitcointicker-latest.bin");
   
    switch (ret) {
@@ -343,6 +360,7 @@ void update_firmware()
 
       case HTTP_UPDATE_OK:
         Serial.println("HTTP_UPDATE_OK");
+        delay(5000);
         ESP.restart(); 
         break;
       default:
@@ -350,7 +368,8 @@ void update_firmware()
         Serial.println(ret);
         break;
     }
-    
+    Serial.println("update_firmware finished");
+
 }
 
 void setup()
