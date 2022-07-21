@@ -44,7 +44,6 @@ M5EPD_Canvas canvasFull(&M5.EPD);
 WiFiManager wm;
 auto timer = timer_create_default();
 
-
 static HttpsOTAStatus_t otastatus;
 
 const char* ca_coingecko = "-----BEGIN CERTIFICATE-----\n" \
@@ -349,7 +348,29 @@ void HttpEvent(HttpEvent_t *event)
             break;
     }
 }
-   
+
+
+bool update_progress(void *)
+{
+   Serial.println("Update progress");
+   otastatus = HttpsOTA.status();
+   switch (otastatus ) {
+    case HTTPS_OTA_SUCCESS: 
+        Serial.println("Firmware written successfully.");
+        timer.cancel();        
+        ESP.restart();
+        break;
+    case HTTPS_OTA_FAIL: 
+        Serial.println("Firmware Upgrade Fail");
+        break;
+    default:
+        Serial.println("unknown status");
+        Serial.println(otastatus);
+    }
+    return true;
+}  
+
+
 void update_firmware()
 {
   
@@ -360,7 +381,10 @@ void update_firmware()
     HttpsOTA.begin("https://raw.githubusercontent.com/pieterjm/M5PaperBitcoinTicker/main/firmware/bitcointicker-latest.bin",ca_github);
 
     Serial.println("Please Wait it takes some time ...");
+
+    timer.every(1000, update_progress);
 }
+
 
 void setup()
 {
@@ -409,15 +433,6 @@ void setup()
 }
 
 void loop()
-{ 
-    otastatus = HttpsOTA.status();
-    if(otastatus == HTTPS_OTA_SUCCESS) { 
-        Serial.println("Firmware written successfully. To reboot device, call API ESP.restart() or PUSH restart button on device");
-        ESP.restart();
-    } else if(otastatus == HTTPS_OTA_FAIL) { 
-        Serial.println("Firmware Upgrade Fail");
-    }
-    delay(1000);
-  
-  //timer.tick(); 
+{  
+  timer.tick(); 
 }
