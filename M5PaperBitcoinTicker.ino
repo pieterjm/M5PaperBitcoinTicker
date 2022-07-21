@@ -366,7 +366,6 @@ bool update_progress(void *)
         break;
     case HTTPS_OTA_UPDATING:
         Serial.println("Update in progress");
-        bUpdate = true;
         break;         
     default:
         Serial.println("unknown status");
@@ -381,12 +380,14 @@ void update_firmware()
   bool bUpdate = false;
   
   HTTPClient http;
-  http.begin("https://github.com/pieterjm/M5PaperBitcoinTicker/raw/main/firmware/bitcointicker-version.txt",ca_github); 
+  http.begin("https://raw.githubusercontent.com/pieterjm/M5PaperBitcoinTicker/main/firmware/bitcointicker-version.txt",ca_github); 
   int httpCode = http.GET();
   if(httpCode > 0) {  
     // file found at server
     if(httpCode == HTTP_CODE_OK) {
-      if ( http.getString().equals(BITCOINTICKER_VERSION) ) {
+      String version = http.getString();
+      Serial.println("Remote version: '" + version + "'  '" + BITCOINTICKER_VERSION + "'");
+      if ( version.equals(BITCOINTICKER_VERSION) ) {
           Serial.println("Version is the same");
       } else {
         Serial.println("Version is not the same, update required");
