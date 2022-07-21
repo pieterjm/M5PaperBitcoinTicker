@@ -11,10 +11,11 @@
 #define DISPLAY_SATSUSD 2
 #define DISPLAY_MSCW 3
 #define DISPLAY_HASHRATE 4
-#define DISPLAY_MEMPOOL 5
-#define DISPLAY_MAX 6
+#define DISPLAY_MEMPOOL_TRANSACTIONS 5
+#define DISPLAY_MEMPOOL_BLOCKS 6
+#define DISPLAY_MAX 7
 
-#define BITCOINTICKER_VERSION "0.3"
+#define BITCOINTICKER_VERSION "0.4"
 
 String legend[DISPLAY_MAX] = {
   "Market price of bitcoin",
@@ -22,7 +23,8 @@ String legend[DISPLAY_MAX] = {
   "Value of one US dollar in satoshis",
   "Moscow time",
   "Current bitcoin mining hashrate (EH/s)",
-  "Number of transactions in mempool"
+  "Number of transactions in mempool",
+  "Number of blocks in mempool"
 };
 
 
@@ -143,8 +145,8 @@ String blockheight = "";
 String price = "";
 String satsperusd = "";
 String hashrate = "";
-String mempool = "";
-
+String mempool_transactions = "";
+String mempool_blocks = "";
 
 
 
@@ -159,7 +161,8 @@ void update_mempool_stats()
     if(httpCode == HTTP_CODE_OK) {
       String payload = http.getString();                
       JSONVar myObject = JSON.parse(payload);
-      mempool = String((int) myObject["count"]);
+      mempool_transactions = String((int) myObject["count"]);
+      mempool_blocks = String(round(((int)myObject["vsize"])/1000000.0));
     }
   } 
   http.end();
@@ -272,8 +275,11 @@ void display_ticker()
     case DISPLAY_HASHRATE:
       canvasTicker.drawString(hashrate,480,0);
       break;
-    case DISPLAY_MEMPOOL:
-      canvasTicker.drawString(mempool,480,0);
+    case DISPLAY_MEMPOOL_TRANSACTIONS:
+      canvasTicker.drawString(mempool_transactions,480,0);
+      break;
+    case DISPLAY_MEMPOOL_BLOCKS:
+      canvasTicker.drawString(mempool_blocks,480,0);
       break;
   }
   canvasTicker.pushCanvas(XPOS_TICKER, YPOS_TICKER, UPDATE_MODE_DU);  
@@ -325,33 +331,6 @@ bool check_buttons(void *)
   return true;
 }
 
-void HttpEvent(HttpEvent_t *event)
-{
-    switch(event->event_id) {
-        case HTTP_EVENT_ERROR:
-            Serial.println("Http Event Error");
-            break;
-        case HTTP_EVENT_ON_CONNECTED:
-            Serial.println("Http Event On Connected");
-            break;
-        case HTTP_EVENT_HEADER_SENT:
-            Serial.println("Http Event Header Sent");
-            break;
-        case HTTP_EVENT_ON_HEADER:
-            Serial.printf("Http Event On Header, key=%s, value=%s\n", event->header_key, event->header_value);
-            break;
-        case HTTP_EVENT_ON_DATA:
-            break;
-        case HTTP_EVENT_ON_FINISH:
-            Serial.println("Http Event On Finish");
-            break;
-        case HTTP_EVENT_DISCONNECTED:
-            Serial.println("Http Event Disconnected");
-            break;
-    }
-}
-
-
 bool update_progress(void *)
 {
    otastatus = HttpsOTA.status();
@@ -396,7 +375,7 @@ bool update_firmware(void *)
 
   if ( bUpdate ) {
     display_legend("Updating firmware. This may take a while.");
-    HttpsOTA.onHttpEvent(HttpEvent);
+    //HttpsOTA.onHttpEvent(HttpEvent);
     HttpsOTA.begin("https://raw.githubusercontent.com/pieterjm/M5PaperBitcoinTicker/main/firmware/bitcointicker-latest.bin",ca_github);
     timer.cancel();
     timer.every(1000, update_progress);    
