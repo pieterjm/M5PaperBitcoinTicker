@@ -4,25 +4,28 @@
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
 #include <arduino-timer.h>
+#include <HTTPUpdate.h>
 
 #define DISPLAY_PRICE 0
 #define DISPLAY_BLOCKHEIGHT 1
 #define DISPLAY_SATSUSD 2
 #define DISPLAY_MSCW 3
 #define DISPLAY_HASHRATE 4
-#define DISPLAY_MAX 5
+#define DISPLAY_MEMPOOL 5
+#define DISPLAY_MAX 6
 
 String legend[DISPLAY_MAX] = {
   "Market price of bitcoin",
   "Number of blocks in the blockchain",
   "Value of one US dollar in satoshis",
   "Moscow time",
-  "Current bitcoin mining hashrate (EH/s)"
+  "Current bitcoin mining hashrate (EH/s)",
+  "Number of transactions in mempool"
 };
 
 
-#define TEXT_COLOR 0
-#define BG_COLOR 15
+#define TEXT_COLOR 15
+#define BG_COLOR 0
 
 #define SCREEN_WIDTH 960
 #define YPOS_LEGEND 400
@@ -103,10 +106,60 @@ const char* ca_mempoolspace = "-----BEGIN CERTIFICATE-----\n" \
 "MntHWpdLgtJmwsQt6j8k9Kf5qLnjatkYYaA7jBU=\n" \
 "-----END CERTIFICATE-----\n";
 
+const char* ca_github = "-----BEGIN CERTIFICATE-----\n" \
+"MIIEvjCCA6agAwIBAgIQBtjZBNVYQ0b2ii+nVCJ+xDANBgkqhkiG9w0BAQsFADBh\n" \
+"MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\n" \
+"d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD\n" \
+"QTAeFw0yMTA0MTQwMDAwMDBaFw0zMTA0MTMyMzU5NTlaME8xCzAJBgNVBAYTAlVT\n" \
+"MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxKTAnBgNVBAMTIERpZ2lDZXJ0IFRMUyBS\n" \
+"U0EgU0hBMjU2IDIwMjAgQ0ExMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC\n" \
+"AQEAwUuzZUdwvN1PWNvsnO3DZuUfMRNUrUpmRh8sCuxkB+Uu3Ny5CiDt3+PE0J6a\n" \
+"qXodgojlEVbbHp9YwlHnLDQNLtKS4VbL8Xlfs7uHyiUDe5pSQWYQYE9XE0nw6Ddn\n" \
+"g9/n00tnTCJRpt8OmRDtV1F0JuJ9x8piLhMbfyOIJVNvwTRYAIuE//i+p1hJInuW\n" \
+"raKImxW8oHzf6VGo1bDtN+I2tIJLYrVJmuzHZ9bjPvXj1hJeRPG/cUJ9WIQDgLGB\n" \
+"Afr5yjK7tI4nhyfFK3TUqNaX3sNk+crOU6JWvHgXjkkDKa77SU+kFbnO8lwZV21r\n" \
+"eacroicgE7XQPUDTITAHk+qZ9QIDAQABo4IBgjCCAX4wEgYDVR0TAQH/BAgwBgEB\n" \
+"/wIBADAdBgNVHQ4EFgQUt2ui6qiqhIx56rTaD5iyxZV2ufQwHwYDVR0jBBgwFoAU\n" \
+"A95QNVbRTLtm8KPiGxvDl7I90VUwDgYDVR0PAQH/BAQDAgGGMB0GA1UdJQQWMBQG\n" \
+"CCsGAQUFBwMBBggrBgEFBQcDAjB2BggrBgEFBQcBAQRqMGgwJAYIKwYBBQUHMAGG\n" \
+"GGh0dHA6Ly9vY3NwLmRpZ2ljZXJ0LmNvbTBABggrBgEFBQcwAoY0aHR0cDovL2Nh\n" \
+"Y2VydHMuZGlnaWNlcnQuY29tL0RpZ2lDZXJ0R2xvYmFsUm9vdENBLmNydDBCBgNV\n" \
+"HR8EOzA5MDegNaAzhjFodHRwOi8vY3JsMy5kaWdpY2VydC5jb20vRGlnaUNlcnRH\n" \
+"bG9iYWxSb290Q0EuY3JsMD0GA1UdIAQ2MDQwCwYJYIZIAYb9bAIBMAcGBWeBDAEB\n" \
+"MAgGBmeBDAECATAIBgZngQwBAgIwCAYGZ4EMAQIDMA0GCSqGSIb3DQEBCwUAA4IB\n" \
+"AQCAMs5eC91uWg0Kr+HWhMvAjvqFcO3aXbMM9yt1QP6FCvrzMXi3cEsaiVi6gL3z\n" \
+"ax3pfs8LulicWdSQ0/1s/dCYbbdxglvPbQtaCdB73sRD2Cqk3p5BJl+7j5nL3a7h\n" \
+"qG+fh/50tx8bIKuxT8b1Z11dmzzp/2n3YWzW2fP9NsarA4h20ksudYbj/NhVfSbC\n" \
+"EXffPgK2fPOre3qGNm+499iTcc+G33Mw+nur7SpZyEKEOxEXGlLzyQ4UfaJbcme6\n" \
+"ce1XR2bFuAJKZTRei9AqPCCcUZlM51Ke92sRKw2Sfh3oius2FkOH6ipjv3U/697E\n" \
+"A7sKPPcw7+uvTPyLNhBzPvOk\n" \
+"-----END CERTIFICATE-----\n";
+
+
 String blockheight = "";
 String price = "";
 String satsperusd = "";
 String hashrate = "";
+String mempool = "";
+
+
+
+void update_mempool_stats()
+{
+  HTTPClient http;
+  http.begin("https://mempool.space/api/mempool",ca_mempoolspace); 
+  int httpCode = http.GET();
+  if(httpCode > 0) {
+  
+    // file found at server
+    if(httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();                
+      JSONVar myObject = JSON.parse(payload);
+      mempool = String((int) myObject["count"]);
+    }
+  } 
+  http.end();
+}
 
 void update_blockheight()
 {
@@ -210,10 +263,13 @@ void display_ticker()
     case DISPLAY_MSCW:
       canvasTicker.drawString(satsperusd.substring(0,2), 310, 0);
       canvasTicker.drawString(":", 480, -40);
-      canvasTicker.drawString(satsperusd.substring(2), 640, 0);
+      canvasTicker.drawString(satsperusd.substring(2), 660, 0);
       break;
     case DISPLAY_HASHRATE:
       canvasTicker.drawString(hashrate,480,0);
+      break;
+    case DISPLAY_MEMPOOL:
+      canvasTicker.drawString(mempool,480,0);
       break;
   }
   canvasTicker.pushCanvas(XPOS_TICKER, YPOS_TICKER, UPDATE_MODE_DU);  
@@ -236,6 +292,7 @@ bool update_display(void *)
   update_hashrate();
   update_price();
   update_blockheight();
+  update_mempool_stats();
 
   display_ticker();
   
@@ -264,6 +321,37 @@ bool check_buttons(void *)
   return true;
 }
 
+
+void update_firmware()
+{
+    WiFiClientSecure client;
+    client.setCACert(ca_github);
+
+    // Reading data over SSL may be slow, use an adequate timeout
+    client.setTimeout(12000 / 1000); // timeout argument is defined in seconds for setTimeout
+
+    t_httpUpdate_return ret = httpUpdate.update(client, "https://raw.githubusercontent.com/pieterjm/M5PaperBitcoinTicker/main/firmware/bitcointicker-latest.bin");
+  
+   switch (ret) {
+      case HTTP_UPDATE_FAILED:
+        Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+        break;
+
+      case HTTP_UPDATE_NO_UPDATES:
+        Serial.println("HTTP_UPDATE_NO_UPDATES");
+        break;
+
+      case HTTP_UPDATE_OK:
+        Serial.println("HTTP_UPDATE_OK");
+        ESP.restart(); 
+        break;
+      default:
+        Serial.println("Some other error");
+        Serial.println(ret);
+        break;
+    }
+    
+}
 
 void setup()
 {
@@ -294,12 +382,16 @@ void setup()
       ESP.restart();
   }     
 
+ 
+  update_firmware();
+
   // Update the display and start an update time to refresh each minute
   update_hashrate();
   update_price();
   update_blockheight();
-
-  display = 0;
+  update_mempool_stats();
+  
+  display = DISPLAY_MSCW;
   display_legend(legend[display]);
   display_ticker();
   
