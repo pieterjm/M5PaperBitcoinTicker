@@ -350,6 +350,8 @@ void HttpEvent(HttpEvent_t *event)
 }
 
 
+bool bUpdate = false;
+
 bool update_progress(void *)
 {
    Serial.println("Update progress");
@@ -358,11 +360,17 @@ bool update_progress(void *)
     case HTTPS_OTA_SUCCESS: 
         Serial.println("Firmware written successfully.");
         timer.cancel();        
-        ESP.restart();
+        if ( bUpdate ) {
+            ESP.restart();
+        }
         break;
     case HTTPS_OTA_FAIL: 
         Serial.println("Firmware Upgrade Fail");
         break;
+    case HTTPS_OTA_UPDATING:
+        Serial.println("Update in progress");
+        bUpdate = true;
+        break;         
     default:
         Serial.println("unknown status");
         Serial.println(otastatus);
@@ -373,7 +381,7 @@ bool update_progress(void *)
 
 void update_firmware()
 {
-  
+    bUpdate = false;
     Serial.println("update_firmware start");
 
     HttpsOTA.onHttpEvent(HttpEvent);
