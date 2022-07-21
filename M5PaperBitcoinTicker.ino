@@ -330,7 +330,14 @@ void update_error(int err) {
   Serial.printf("CALLBACK:  HTTP update fatal error code %d\n", err);
 }
 
+void update_started() {
+  Serial.println("CALLBACK:  HTTP update process started");
+}
 
+void update_finished() {
+  Serial.println("CALLBACK:  HTTP update process finished");
+}
+   
 void update_firmware()
 {
     Serial.println("update_firmware start");
@@ -347,6 +354,8 @@ void update_firmware()
     //httpUpdate.onEnd(update_finished);
     httpUpdate.onProgress(update_progress);
     httpUpdate.onError(update_error);
+    httpUpdate.onStart(update_started);
+    httpUpdate.onEnd(update_finished);
     t_httpUpdate_return ret = httpUpdate.update(client, "https://raw.githubusercontent.com/pieterjm/M5PaperBitcoinTicker/main/firmware/bitcointicker-latest.bin");
   
    switch (ret) {
@@ -360,8 +369,6 @@ void update_firmware()
 
       case HTTP_UPDATE_OK:
         Serial.println("HTTP_UPDATE_OK");
-        delay(5000);
-        ESP.restart(); 
         break;
       default:
         Serial.println("Some other error");
@@ -379,7 +386,6 @@ void setup()
   
   M5.begin();
   M5.EPD.Clear(true);
-
 
   canvasFull.createCanvas(960,540);
   canvasFull.fillCanvas(BG_COLOR);
