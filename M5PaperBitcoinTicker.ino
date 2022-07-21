@@ -385,6 +385,7 @@ void update_firmware()
 
     HttpsOTA.onHttpEvent(HttpEvent);
     Serial.println("Starting OTA");
+    //HttpsOTA.begin("https://github.com/pieterjm/M5PaperBitcoinTicker/raw/main/firmware/bitcointicker-latest.bin",,ca_github);
     HttpsOTA.begin("https://raw.githubusercontent.com/pieterjm/M5PaperBitcoinTicker/main/firmware/bitcointicker-latest.bin",ca_github);
 
     Serial.println("Please Wait it takes some time ...");
