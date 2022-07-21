@@ -162,7 +162,7 @@ void update_mempool_stats()
       String payload = http.getString();                
       JSONVar myObject = JSON.parse(payload);
       mempool_transactions = String((int) myObject["count"]);
-      mempool_blocks = String(round(((int)myObject["vsize"])/1000000.0));
+      mempool_blocks = String((int)(round(0.5+((int)myObject["vsize"])/1000000.0)));
     }
   } 
   http.end();
